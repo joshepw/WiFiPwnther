@@ -1,0 +1,23 @@
+{
+	"C_Cpp.errorSquiggles": "Disabled",
+	"files.associations": {
+		"array": "cpp",
+		"*.tcc": "cpp",
+		"memory": "cpp",
+		"istream": "cpp",
+		"functional": "cpp",
+		"tuple": "cpp",
+		"utility": "cpp",
+		"atomic": "cpp",
+		"optional": "cpp",
+		"new": "cpp",
+		"streambuf": "cpp",
+		"typeinfo": "cpp",
+		"deque": "cpp",
+		"string": "cpp",
+		"unordered_map": "cpp",
+		"vector": "cpp",
+		"string_view": "cpp",
+		"initializer_list": "cpp"
+	}
+}
