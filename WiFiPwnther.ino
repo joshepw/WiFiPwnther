@@ -45,8 +45,15 @@ void setup()
 	settings_obj.begin();
 	wifi_scan_obj.RunSetup();
 
-	if (!sd_obj.initSD())
-		Serial.println(F("SD Card NOT Supported"));
+	try {
+		if (!sd_obj.initSD())
+			Serial.println(F("SD Card NOT Supported"));
+	}
+	catch(const std::exception& e)
+	{
+		Serial.print("[ERROR] ");
+		Serial.println(e.what());
+	}
 
 	Serial.println("CLI Ready");
 	serial_cli.RunSetup();
@@ -58,13 +65,22 @@ void loop()
 
 	if (wifi_scan_obj.currentScanMode != ESP_UPDATE)
 	{
-		serial_cli.main(current_time);
-		wifi_scan_obj.main(current_time);
-		sd_obj.main();
-		settings_obj.main(current_time);
+		try
+		{
+			serial_cli.main(current_time);
+			wifi_scan_obj.main(current_time);
+			sd_obj.main();
+			settings_obj.main(current_time);
 
-		if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
-			web_obj.main();
+			if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
+				web_obj.main();
+		}
+		catch(const std::exception& e)
+		{
+			Serial.print("[ERROR] ");
+			Serial.println(e.what());
+		}
+		
 
 		delay(50);
 	}

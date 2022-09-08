@@ -10,11 +10,11 @@ bool SDInterface::initSD()
 	pinMode(SD_DET, INPUT);
 	if (digitalRead(SD_DET) == LOW)
 	{
-		Serial.println(F("SD Card Detect Pin Detected"));
+		Serial.println("SD Card Detect Pin Detected");
 	}
 	else
 	{
-		Serial.println(F("SD Card Detect Pin Not Detected"));
+		Serial.println("SD Card Detect Pin Not Detected");
 		this->supported = false;
 		return false;
 	}
@@ -23,7 +23,7 @@ bool SDInterface::initSD()
 #ifdef BRD_32CAM
 	if (!SD_MMC.begin())
 	{
-		Serial.println(F("Failed to mount SD Card"));
+		Serial.println("Failed to mount SD Card");
 		this->supported = false;
 		return false;
 	}
@@ -38,6 +38,7 @@ bool SDInterface::initSD()
 	}
 
 	this->cardSizeMB = SD_MMC.cardSize() / (1024 * 1024);
+	Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
 
 	if (!SD_MMC.exists("/SCRIPTS"))
 	{
@@ -58,7 +59,7 @@ bool SDInterface::initSD()
 	this->cardType = SD.cardType();
 	this->cardSizeMB = SD.cardSize() / (1024 * 1024);
 
-	// Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
+	Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
 
 	if (this->supported)
 	{

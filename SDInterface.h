@@ -2,6 +2,7 @@
 #define SDInterface_h
 
 #include "configs.h"
+#include "SD.h"
 
 #ifdef KIT
 #define SD_DET 4
@@ -14,6 +15,7 @@
 #ifdef BRD_32CAM
 #include "SD_MMC.h"
 
+#define WITHOUT_FLASH_LED
 #define SD_CS 2
 #define PWDN_GPIO_NUM 32
 #define RESET_GPIO_NUM -1
@@ -22,7 +24,6 @@
 #define SIOC_GPIO_NUM 27
 #endif
 
-#include "SD.h"
 #include "Buffer.h"
 #include <Update.h>
 

@@ -2,6 +2,6 @@
     "sketch": "WiFiPwnther.ino",
     "configuration": "CPUFreq=240,FlashMode=qio,FlashFreq=80",
     "board": "esp32:esp32:esp32cam",
-    "port": "/dev/tty.usbserial-110",
+    "port": "/dev/tty.usbserial-210",
     "output": "../ArduinoOutput"
 }
