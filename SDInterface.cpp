@@ -21,7 +21,7 @@ bool SDInterface::initSD()
 #endif
 
 #ifdef BRD_32CAM
-	if (!SD_MMC.begin())
+	if (!SD_MMC.begin("/sdcard", true))
 	{
 		Serial.println("Failed to mount SD Card");
 		this->supported = false;
@@ -39,14 +39,6 @@ bool SDInterface::initSD()
 
 	this->cardSizeMB = SD_MMC.cardSize() / (1024 * 1024);
 	Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
-
-	if (!SD_MMC.exists("/SCRIPTS"))
-	{
-		Serial.println("/SCRIPTS does not exist. Creating...");
-
-		SD.mkdir("/SCRIPTS");
-		Serial.println("/SCRIPTS created");
-	}
 #else
 	if (!SD.begin(SD_CS))
 	{
@@ -78,15 +70,6 @@ bool SDInterface::initSD()
 	}
 
 	buffer_obj = Buffer();
-
-	if (!SD.exists("/SCRIPTS"))
-	{
-		Serial.println("/SCRIPTS does not exist. Creating...");
-
-		SD.mkdir("/SCRIPTS");
-		Serial.println("/SCRIPTS created");
-	}
-
 #endif
 
 	return true;
@@ -150,7 +133,11 @@ void SDInterface::runUpdate()
 
 void SDInterface::performUpdate(Stream &updateSource, size_t updateSize)
 {
+#ifdef SIMPLE_LED
+	if (Update.begin(updateSize, 0, SIMPLE_LED))
+#else
 	if (Update.begin(updateSize))
+#endif
 	{
 		size_t written = Update.writeStream(updateSource);
 		if (written == updateSize)
@@ -161,6 +148,7 @@ void SDInterface::performUpdate(Stream &updateSource, size_t updateSize)
 		{
 			Serial.println("Written only : " + String(written) + "/" + String(updateSize) + ". Retry?");
 		}
+
 		if (Update.end())
 		{
 			Serial.println("OTA done!");
@@ -198,20 +186,29 @@ bool SDInterface::checkDetectPin()
 
 void SDInterface::main()
 {
-	if ((this->supported) && (this->do_save))
+	try
 	{
-#ifdef BRD_32CAM
-		buffer_obj.forceSave(&SD_MMC);
-#else
-		buffer_obj.forceSave(&SD);
-#endif
-	}
-	else if (!this->supported)
-	{
-		if (checkDetectPin())
+
+		if ((this->supported) && (this->do_save))
 		{
-			delay(100);
-			this->initSD();
+#ifdef BRD_32CAM
+			buffer_obj.forceSave(&SD_MMC);
+#else
+			buffer_obj.forceSave(&SD);
+#endif
 		}
+		else if (!this->supported)
+		{
+			if (checkDetectPin())
+			{
+				delay(100);
+				this->initSD();
+			}
+		}
+	}
+	catch (const std::exception &e)
+	{
+		Serial.print("Error: ");
+		Serial.println(e.what());
 	}
 }

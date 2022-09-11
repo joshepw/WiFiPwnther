@@ -405,7 +405,8 @@ void SerialCommandLine::runCommand(String input)
 				{
 					Serial.println("SD card is not connected. Cannot perform SD Update");
 					return;
-				}
+				} else 
+					sd_obj.runUpdate();
 			}
 		}
 	}

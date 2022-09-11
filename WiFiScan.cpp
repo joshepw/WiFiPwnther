@@ -943,7 +943,7 @@ void WiFiScan::apSnifferCallbackFull(void *buf, wifi_promiscuous_pkt_type_t type
 				ap.beacon->add(snifferPacket->payload[34]);
 				ap.beacon->add(snifferPacket->payload[35]);
 
-				Serial.printf("--------------------\n%s %s %d\n%02x:%02x:%02x:%02x:%02x:%02x Ch:%d\nBeacon: ", ap.essid.c_str(), getSignalStrength(snifferPacket->rx_ctrl.rssi), snifferPacket->rx_ctrl.rssi, ap.bssid[0], ap.bssid[1], ap.bssid[2], ap.bssid[3], ap.bssid[4], ap.bssid[5], ap.channel);
+				Serial.printf("-------------------\n%s %s %d\n%02x:%02x:%02x:%02x:%02x:%02x Ch:%d\nBeacon: ", ap.essid.c_str(), getSignalStrength(snifferPacket->rx_ctrl.rssi), snifferPacket->rx_ctrl.rssi, ap.bssid[0], ap.bssid[1], ap.bssid[2], ap.bssid[3], ap.bssid[4], ap.bssid[5], ap.channel);
 
 				for (int i = 0; i < ap.beacon->size(); i++)
 				{
