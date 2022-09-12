@@ -8,6 +8,8 @@ int num_eapol = 0;
 LinkedList<ssid> *ssids;
 LinkedList<AccessPoint> *access_points;
 
+bool WiFiScan::is_json = false;
+
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3)
 {
 	if (arg == 31337)
@@ -120,6 +122,192 @@ String WiFiScan::getSignalStrength(int rssi)
 		return "█⯐⯐⯐";
 	else
 		return "⯐⯐⯐⯐";
+}
+
+String WiFiScan::getBeaconText(LinkedList<char> *beacon)
+{
+	char beacon_addr[] = "00 00";
+
+	sprintf(beacon_addr, "%02x %02x", beacon->get(0), beacon->get(1));
+
+	return beacon_addr;
+}
+
+String WiFiScan::getMacAddressText(int bssid[])
+{
+	char addr[] = "00:00:00:00:00:00";
+
+	sprintf(addr, "%02x:%02x:%02x:%02x:%02x:%02x", bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
+
+	return addr;
+}
+
+void WiFiScan::foundAP(AccessPoint ap)
+{
+	if (is_json)
+	{
+		DynamicJsonDocument doc(1024);
+
+		doc["type"] = "found";
+		doc["essid"] = ap.essid == "" ? "*Hidden*" : ap.essid;
+		doc["channel"] = ap.channel;
+		doc["bssid"] = getMacAddressText(ap.bssid);
+		doc["selected"] = ap.selected;
+		doc["beacon"] = getBeaconText(ap.beacon);
+		doc["rssi"] = ap.rssi;
+
+		serializeJson(doc, Serial);
+		Serial.println();
+	}
+	else
+	{
+		Serial.println("-------------------");
+		Serial.printf("%s %s %d\n%s Ch:%d\nBeacon: %s\n", ap.essid == "" ? "(っ ̫-) *Hidden*" : ap.essid.c_str(), getSignalStrength(ap.rssi).c_str(), ap.rssi, getMacAddressText(ap.bssid).c_str(), ap.channel, getBeaconText(ap.beacon).c_str());
+	}
+}
+
+void WiFiScan::foundSniffAP(AccessPoint ap) {
+	if (is_json) {
+		DynamicJsonDocument doc(1024);
+
+		doc["type"] = "sniff";
+		doc["essid"] = ap.essid == "" ? "*Hidden*" : ap.essid;
+		doc["channel"] = ap.channel;
+		doc["bssid"] = getMacAddressText(ap.bssid);
+		doc["selected"] = ap.selected;
+		doc["beacon"] = getBeaconText(ap.beacon);
+		doc["rssi"] = ap.rssi;
+
+		serializeJson(doc, Serial);
+		Serial.println();
+	} else {
+		Serial.printf("%d %s %s Ch:%d\n", ap.rssi, ap.essid == "" ? "(っ ̫-) *Hidden*" : ap.essid.c_str(), getMacAddressText(ap.bssid).c_str(), ap.channel);
+	}
+}
+
+void WiFiScan::updateAP(AccessPoint ap, int id) {
+	if (is_json) {
+		DynamicJsonDocument doc(1024);
+
+		doc["type"] = "update";
+		doc["id"] = id;
+		doc["essid"] = ap.essid == "" ? "*Hidden*" : ap.essid;
+		doc["channel"] = ap.channel;
+		doc["bssid"] = getMacAddressText(ap.bssid);
+		doc["selected"] = ap.selected;
+		doc["beacon"] = getBeaconText(ap.beacon);
+		doc["rssi"] = ap.rssi;
+
+		serializeJson(doc, Serial);
+		Serial.println();
+	}
+}
+
+void WiFiScan::listAPs()
+{
+	if (is_json)
+	{
+		DynamicJsonDocument doc(1024);
+
+		for (int i = 0; i < access_points->size(); i++)
+		{
+			AccessPoint ap = access_points->get(i);
+
+			doc["ap"][i]["id"] = i;
+			doc["ap"][i]["essid"] = ap.essid == "" ? "*Hidden*" : ap.essid;
+			doc["ap"][i]["channel"] = ap.channel;
+			doc["ap"][i]["bssid"] = getMacAddressText(ap.bssid);
+			doc["ap"][i]["selected"] = ap.selected;
+			doc["ap"][i]["beacon"] = getBeaconText(ap.beacon);
+			doc["ap"][i]["rssi"] = ap.rssi;
+		}
+
+		serializeJson(doc, Serial);
+		Serial.println();
+	}
+	else
+	{
+		for (int i = 0; i < access_points->size(); i++)
+		{
+			AccessPoint ap = access_points->get(i);
+			Serial.printf("[%d] %s %02x:%02x:%02x:%02x:%02x:%02x %s %d Ch:%d %s\n", i, ap.essid == "" ? "(っ ̫-) *Hidden*" : ap.essid.c_str(), ap.bssid[0], ap.bssid[1], ap.bssid[2], ap.bssid[3], ap.bssid[4], ap.bssid[5], getSignalStrength(ap.rssi), ap.rssi, ap.channel, ap.selected ? " (selected)" : "");
+		}
+	}
+}
+
+void WiFiScan::listSSIDs()
+{
+	if (is_json)
+	{
+		DynamicJsonDocument doc(1024);
+
+		for (int i = 0; i < access_points->size(); i++)
+		{
+			ssid station = ssids->get(i);
+
+			doc["ssid"][i]["id"] = i;
+			doc["ssid"][i]["essid"] = station.essid;
+			doc["ssid"][i]["bssid"] = getMacAddressText(station.bssid);
+			doc["ssid"][i]["selected"] = station.selected;
+		}
+
+		serializeJson(doc, Serial);
+		Serial.println();
+	}
+	else
+	{
+		for (int i = 0; i < ssids->size(); i++)
+		{
+			ssid station = ssids->get(i);
+			Serial.printf("[%d] %s%s %02x:%02x:%02x:%02x:%02x:%02x\n", i, station.essid.c_str(), station.selected ? " (selected)" : "", station.bssid[0], station.bssid[1], station.bssid[2], station.bssid[3], station.bssid[4], station.bssid[5]);
+		}
+	}
+}
+
+void WiFiScan::listAll()
+{
+	if (is_json)
+	{
+		DynamicJsonDocument doc(1024);
+
+		for (int i = 0; i < access_points->size(); i++)
+		{
+			AccessPoint ap = access_points->get(i);
+
+			doc["ap"][i]["id"] = i;
+			doc["ap"][i]["essid"] = ap.essid == "" ? "*Hidden*" : ap.essid;
+			doc["ap"][i]["channel"] = ap.channel;
+			doc["ap"][i]["bssid"] = getMacAddressText(ap.bssid);
+			doc["ap"][i]["selected"] = ap.selected;
+			doc["ap"][i]["beacon"] = getBeaconText(ap.beacon);
+			doc["ap"][i]["rssi"] = ap.rssi;
+		}
+
+		for (int i = 0; i < ssids->size(); i++)
+		{
+			ssid station = ssids->get(i);
+
+			doc["ssid"][i]["id"] = i;
+			doc["ssid"][i]["essid"] = station.essid;
+			doc["ssid"][i]["bssid"] = getMacAddressText(station.bssid);
+			doc["ssid"][i]["selected"] = station.selected;
+		}
+
+		serializeJson(doc, Serial);
+		Serial.println();
+	}
+	else
+	{
+		if (access_points->size() > 0)
+				Serial.println("--- APs ------------");
+
+		listAPs();
+
+		if (ssids->size() > 0)
+			Serial.println("--- SSIDs ----------");
+
+		listSSIDs();
+	}
 }
 
 int WiFiScan::clearAPs()
@@ -848,17 +1036,12 @@ void WiFiScan::apSnifferCallbackFull(void *buf, wifi_promiscuous_pkt_type_t type
 			{
 				mac_match = true;
 				AccessPoint temp_ap = access_points->get(i);
-				// Serial.print("Checking ");
-				// Serial.print(addr);
-				// Serial.println(" against " + (String)access_points->get(i).essid);
 
 				for (int x = 0; x < 6; x++)
 				{
-					// Serial.println((String)snifferPacket->payload[x + 10] + " | " + (String)access_points->get(i).bssid[x]);
 					if (snifferPacket->payload[x + 10] != temp_ap.bssid[x])
 					{
 						mac_match = false;
-						// Serial.println("MACs do not match");
 						break;
 					}
 				}
@@ -866,10 +1049,10 @@ void WiFiScan::apSnifferCallbackFull(void *buf, wifi_promiscuous_pkt_type_t type
 				if (mac_match)
 				{
 					in_list = true;
-					temp_ap.rssi = snifferPacket->rx_ctrl.rssi;
 
-					if (temp_ap.selected) {
-						Serial.printf("Updated: \n%s %s %d\n%02x:%02x:%02x:%02x:%02x:%02x Ch:%d\n", temp_ap.essid.c_str(), getSignalStrength(temp_ap.rssi), temp_ap.rssi, temp_ap.bssid[0], temp_ap.bssid[1], temp_ap.bssid[2], temp_ap.bssid[3], temp_ap.bssid[4], temp_ap.bssid[5], temp_ap.channel);
+					if (temp_ap.rssi != snifferPacket->rx_ctrl.rssi) {
+						temp_ap.rssi = snifferPacket->rx_ctrl.rssi;
+						updateAP(temp_ap, i);
 					}
 
 					break;
@@ -880,18 +1063,10 @@ void WiFiScan::apSnifferCallbackFull(void *buf, wifi_promiscuous_pkt_type_t type
 			{
 
 				delay(random(0, 10));
-				// Serial.print("RSSI: ");
-				// Serial.print(snifferPacket->rx_ctrl.rssi);
-				// Serial.print(" Ch: ");
-				// Serial.print(snifferPacket->rx_ctrl.channel);
-				// Serial.print(" BSSID: ");
-				// Serial.print(addr);
-				// display_string.concat(addr);
-				// Serial.print(" ESSID: ");
 				display_string.concat(" -> ");
+
 				for (int i = 0; i < snifferPacket->payload[37]; i++)
 				{
-					// Serial.print((char)snifferPacket->payload[i + 38]);
 					display_string.concat((char)snifferPacket->payload[i + 38]);
 					essid.concat((char)snifferPacket->payload[i + 38]);
 				}
@@ -903,26 +1078,6 @@ void WiFiScan::apSnifferCallbackFull(void *buf, wifi_promiscuous_pkt_type_t type
 				{
 					display_string.concat(" ");
 				}
-
-				Serial.print(" ");
-				if (essid == "")
-				{
-					essid = "(?) Hidden";
-					// Serial.print(essid + " ");
-				}
-
-				// LinkedList<char> beacon = new LinkedList<char>();
-
-				/*AccessPoint ap = {essid,
-								  snifferPacket->rx_ctrl.channel,
-								  {snifferPacket->payload[10],
-								   snifferPacket->payload[11],
-								   snifferPacket->payload[12],
-								   snifferPacket->payload[13],
-								   snifferPacket->payload[14],
-								   snifferPacket->payload[15]},
-								  false,
-								  NULL};*/
 
 				AccessPoint ap;
 				ap.essid = essid;
@@ -936,33 +1091,14 @@ void WiFiScan::apSnifferCallbackFull(void *buf, wifi_promiscuous_pkt_type_t type
 				ap.selected = false;
 
 				ap.beacon = new LinkedList<char>();
-
-				// for (int i = 0; i < len; i++) {
-				//   ap.beacon->add(snifferPacket->payload[i]);
-				// }
 				ap.beacon->add(snifferPacket->payload[34]);
 				ap.beacon->add(snifferPacket->payload[35]);
 
-				Serial.printf("-------------------\n%s %s %d\n%02x:%02x:%02x:%02x:%02x:%02x Ch:%d\nBeacon: ", ap.essid.c_str(), getSignalStrength(snifferPacket->rx_ctrl.rssi), snifferPacket->rx_ctrl.rssi, ap.bssid[0], ap.bssid[1], ap.bssid[2], ap.bssid[3], ap.bssid[4], ap.bssid[5], ap.channel);
-
-				for (int i = 0; i < ap.beacon->size(); i++)
-				{
-					char hexCar[4];
-					sprintf(hexCar, "%02X", ap.beacon->get(i));
-					Serial.print(hexCar);
-					if ((i + 1) % 16 == 0)
-						Serial.print("\n");
-					else
-						Serial.print(" ");
-				}
-
 				ap.rssi = snifferPacket->rx_ctrl.rssi;
 
+				foundAP(ap);
+
 				access_points->add(ap);
-
-				Serial.print(access_points->size());
-
-				Serial.println();
 
 				if (save_packet)
 					sd_obj.addPacket(snifferPacket->payload, len);
@@ -1004,17 +1140,12 @@ void WiFiScan::apSnifferCallback(void *buf, wifi_promiscuous_pkt_type_t type)
 			for (int i = 0; i < access_points->size(); i++)
 			{
 				mac_match = true;
-				// Serial.print("Checking ");
-				// Serial.print(addr);
-				// Serial.println(" against " + (String)access_points->get(i).essid);
 
 				for (int x = 0; x < 6; x++)
 				{
-					// Serial.println((String)snifferPacket->payload[x + 10] + " | " + (String)access_points->get(i).bssid[x]);
 					if (snifferPacket->payload[x + 10] != access_points->get(i).bssid[x])
 					{
 						mac_match = false;
-						// Serial.println("MACs do not match");
 						break;
 					}
 				}
@@ -1029,18 +1160,11 @@ void WiFiScan::apSnifferCallback(void *buf, wifi_promiscuous_pkt_type_t type)
 			{
 
 				delay(random(0, 10));
-				Serial.print("RSSI: ");
-				Serial.print(snifferPacket->rx_ctrl.rssi);
-				Serial.print(" Ch: ");
-				Serial.print(snifferPacket->rx_ctrl.channel);
-				Serial.print(" BSSID: ");
-				Serial.print(addr);
 				display_string.concat(addr);
-				Serial.print(" ESSID: ");
 				display_string.concat(" -> ");
+
 				for (int i = 0; i < snifferPacket->payload[37]; i++)
 				{
-					Serial.print((char)snifferPacket->payload[i + 38]);
 					display_string.concat((char)snifferPacket->payload[i + 38]);
 					essid.concat((char)snifferPacket->payload[i + 38]);
 				}
@@ -1051,14 +1175,6 @@ void WiFiScan::apSnifferCallback(void *buf, wifi_promiscuous_pkt_type_t type)
 				for (int i = 0; i < 40 - temp_len; i++)
 				{
 					display_string.concat(" ");
-				}
-
-				Serial.print(" ");
-
-				if (essid == "")
-				{
-					essid = "(?) Hidden";
-					Serial.print(essid + " ");
 				}
 
 				AccessPoint ap = {essid,
@@ -1073,11 +1189,9 @@ void WiFiScan::apSnifferCallback(void *buf, wifi_promiscuous_pkt_type_t type)
 								  NULL,
 								  snifferPacket->rx_ctrl.rssi};
 
+				foundSniffAP(ap);
+
 				access_points->add(ap);
-
-				Serial.print(access_points->size());
-
-				Serial.println();
 
 				if (save_packet)
 					sd_obj.addPacket(snifferPacket->payload, len);

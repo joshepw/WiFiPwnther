@@ -15,10 +15,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "Assets.h"
 #include "WiFiScan.h"
 #include "SDInterface.h"
-#include "Web.h"
 #include "Buffer.h"
 #include "esp_interface.h"
 #include "settings.h"
@@ -28,7 +26,6 @@
 const String PROGMEM version_number = APP_VERSION;
 WiFiScan wifi_scan_obj;
 SDInterface sd_obj;
-Web web_obj;
 Buffer buffer_obj;
 EspInterface esp_obj;
 Settings settings_obj;
@@ -71,9 +68,6 @@ void loop()
 			wifi_scan_obj.main(current_time);
 			sd_obj.main();
 			settings_obj.main(current_time);
-
-			if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
-				web_obj.main();
 		}
 		catch(const std::exception& e)
 		{

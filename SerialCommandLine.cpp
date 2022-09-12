@@ -101,6 +101,8 @@ void SerialCommandLine::runCommand(String input)
 
 	LinkedList<String> cmd_args = this->parseCommand(input, " ");
 
+	wifi_scan_obj.is_json = this->argSearch(&cmd_args, "-json") != -1;
+
 	//// Admin commands
 
 	// Help
@@ -117,22 +119,15 @@ void SerialCommandLine::runCommand(String input)
 	// Stop Scan
 	if (cmd_args.get(0) == STOPSCAN_CMD)
 	{
-		if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
-		{
-			wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-			WiFi.softAPdisconnect(true);
-			web_obj.shutdownServer();
-			return;
-		}
-
 		wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-		Serial.println("Stopping WiFi tran/recv");
+		Serial.println("Stopping WiFi Tx/Rx");
 	}
+
 	// Channel command
 	else if (cmd_args.get(0) == CH_CMD)
 	{
 		// Search for channel set arg
-		int ch_set = this->argSearch(&cmd_args, "-s");
+		int ch_set = this->argSearch(&cmd_args, "-set");
 
 		if (cmd_args.size() == 1)
 		{
@@ -148,22 +143,26 @@ void SerialCommandLine::runCommand(String input)
 	// Clear APs
 	else if (cmd_args.get(0) == CLEARAP_CMD)
 	{
-		int ap_sw = this->argSearch(&cmd_args, "-a"); // APs
-		int ss_sw = this->argSearch(&cmd_args, "-s"); // SSIDs
+		int ap_sw = this->argSearch(&cmd_args, "-ap");	 // APs
+		int ss_sw = this->argSearch(&cmd_args, "-ssid"); // SSIDs
 
 		if (ap_sw != -1)
 			wifi_scan_obj.RunClearAPs();
-
-		if (ss_sw != -1)
+		else if (ss_sw != -1)
 			wifi_scan_obj.RunClearSSIDs();
+		else
+		{
+			wifi_scan_obj.RunClearAPs();
+			wifi_scan_obj.RunClearSSIDs();
+		}
 	}
 
 	else if (cmd_args.get(0) == SETTINGS_CMD)
 	{
-		int ss_sw = this->argSearch(&cmd_args, "-s");	   // Set setting
-		int re_sw = this->argSearch(&cmd_args, "-r");	   // Reset setting
-		int en_sw = this->argSearch(&cmd_args, "enable");  // enable setting
-		int da_sw = this->argSearch(&cmd_args, "disable"); // disable setting
+		int ss_sw = this->argSearch(&cmd_args, "-set");		// Set setting
+		int re_sw = this->argSearch(&cmd_args, "-restore"); // Reset setting
+		int en_sw = this->argSearch(&cmd_args, "true");		// enable setting
+		int da_sw = this->argSearch(&cmd_args, "false");	// disable setting
 
 		if (re_sw != -1)
 		{
@@ -173,12 +172,17 @@ void SerialCommandLine::runCommand(String input)
 
 		if (ss_sw == -1)
 		{
-			settings_obj.printJsonSettings(settings_obj.getSettingsString());
+			if (wifi_scan_obj.is_json) {
+				Serial.println(settings_obj.getSettingsString());
+			} else {
+				settings_obj.printJsonSettings(settings_obj.getSettingsString());
+			}
 		}
 		else
 		{
 			bool result = false;
 			String setting_name = cmd_args.get(ss_sw + 1);
+
 			if (en_sw != -1)
 				result = settings_obj.saveSetting<bool>(setting_name, true);
 			else if (da_sw != -1)
@@ -210,7 +214,7 @@ void SerialCommandLine::runCommand(String input)
 		// AP Scan
 		if (cmd_args.get(0) == SCANAP_CMD)
 		{
-			int full_sw = this->argSearch(&cmd_args, "-c");
+			int full_sw = this->argSearch(&cmd_args, "-full");
 
 			if (full_sw == -1)
 			{
@@ -223,58 +227,82 @@ void SerialCommandLine::runCommand(String input)
 				wifi_scan_obj.StartScan(WIFI_SCAN_TARGET_AP_FULL);
 			}
 		}
-		// Beacon sniff
-		else if (cmd_args.get(0) == SNIFF_BEACON_CMD)
+		// Sniff
+		else if (cmd_args.get(0) == SNIFF_CMD)
 		{
-			Serial.println("Starting Beacon sniff. Stop with " + (String)STOPSCAN_CMD);
-			wifi_scan_obj.StartScan(WIFI_SCAN_AP);
-		}
-		// Probe sniff
-		else if (cmd_args.get(0) == SNIFF_PROBE_CMD)
-		{
-			Serial.println("Starting Probe sniff. Stop with " + (String)STOPSCAN_CMD);
-			wifi_scan_obj.StartScan(WIFI_SCAN_PROBE);
-		}
-		// Deauth sniff
-		else if (cmd_args.get(0) == SNIFF_DEAUTH_CMD)
-		{
-			Serial.println("Starting Deauth sniff. Stop with " + (String)STOPSCAN_CMD);
-			wifi_scan_obj.StartScan(WIFI_SCAN_DEAUTH);
-		}
-		// Pwn sniff
-		else if (cmd_args.get(0) == SNIFF_PWN_CMD)
-		{
-			Serial.println("Starting Pwnagotchi sniff. Stop with " + (String)STOPSCAN_CMD);
-			wifi_scan_obj.StartScan(WIFI_SCAN_PWN);
-		}
-		// Espressif sniff
-		else if (cmd_args.get(0) == SNIFF_ESP_CMD)
-		{
-			Serial.println("Starting Espressif device sniff. Stop with " + (String)STOPSCAN_CMD);
-			wifi_scan_obj.StartScan(WIFI_SCAN_ESPRESSIF);
-		}
-		// PMKID sniff
-		else if (cmd_args.get(0) == SNIFF_PMKID_CMD)
-		{
-			int ch_sw = this->argSearch(&cmd_args, "-c");
-			int d_sw = this->argSearch(&cmd_args, "-d"); // Deauth for pmkid
-
-			if (ch_sw != -1)
+			// Beacon sniff
+			if (this->argSearch(&cmd_args, SNIFF_TYPE_BEACON) != -1)
 			{
-				wifi_scan_obj.set_channel = cmd_args.get(ch_sw + 1).toInt();
-				wifi_scan_obj.changeChannel();
-				Serial.println("Set channel: " + (String)wifi_scan_obj.set_channel);
+				Serial.println("Starting Beacon sniff. Stop with " + (String)STOPSCAN_CMD);
+				wifi_scan_obj.StartScan(WIFI_SCAN_AP);
+			}
+			// Probe sniff
+			else if (this->argSearch(&cmd_args, SNIFF_TYPE_PROBE) != -1)
+			{
+				Serial.println("Starting Probe sniff. Stop with " + (String)STOPSCAN_CMD);
+				wifi_scan_obj.StartScan(WIFI_SCAN_PROBE);
+			}
+			// Deauth sniff
+			else if (this->argSearch(&cmd_args, SNIFF_TYPE_DEAUTH) != -1)
+			{
+				Serial.println("Starting Deauth sniff. Stop with " + (String)STOPSCAN_CMD);
+				wifi_scan_obj.StartScan(WIFI_SCAN_DEAUTH);
+			}
+			// Pwn sniff
+			else if (this->argSearch(&cmd_args, SNIFF_TYPE_PWN) != -1)
+			{
+				Serial.println("Starting Pwnagotchi sniff. Stop with " + (String)STOPSCAN_CMD);
+				wifi_scan_obj.StartScan(WIFI_SCAN_PWN);
+			}
+			// Espressif sniff
+			else if (this->argSearch(&cmd_args, SNIFF_TYPE_ESP) != -1)
+			{
+				Serial.println("Starting Espressif device sniff. Stop with " + (String)STOPSCAN_CMD);
+				wifi_scan_obj.StartScan(WIFI_SCAN_ESPRESSIF);
+			}
+			// PMKID sniff
+			else if (this->argSearch(&cmd_args, SNIFF_TYPE_PMKID) != -1)
+			{
+				int ch_sw = this->argSearch(&cmd_args, "-channel");
+				int d_sw = this->argSearch(&cmd_args, "-frames"); // Deauth for pmkid
+
+				if (ch_sw != -1)
+				{
+					wifi_scan_obj.set_channel = cmd_args.get(ch_sw + 1).toInt();
+					wifi_scan_obj.changeChannel();
+					Serial.println("Set channel: " + (String)wifi_scan_obj.set_channel);
+				}
+
+				if (d_sw == -1)
+				{
+					Serial.println("Starting PMKID sniff on channel " + (String)wifi_scan_obj.set_channel + ". Stop with " + (String)STOPSCAN_CMD);
+					wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL);
+				}
+				else
+				{
+					Serial.println("Starting PMKID sniff with deauthentication on channel " + (String)wifi_scan_obj.set_channel + ". Stop with " + (String)STOPSCAN_CMD);
+					wifi_scan_obj.StartScan(WIFI_SCAN_ACTIVE_EAPOL);
+				}
 			}
 
-			if (d_sw == -1)
+			//// Bluetooth scan/attack commands
+			// Bluetooth scan
+			else if (this->argSearch(&cmd_args, SNIFF_TYPE_BT) != -1)
 			{
-				Serial.println("Starting PMKID sniff on channel " + (String)wifi_scan_obj.set_channel + ". Stop with " + (String)STOPSCAN_CMD);
-				wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL);
+				Serial.println("Starting Bluetooth scan. Stop with " + (String)STOPSCAN_CMD);
+				wifi_scan_obj.StartScan(BT_SCAN_ALL);
 			}
+			// Bluetooth CC Skimmer scan
+			else if (this->argSearch(&cmd_args, SNIFF_TYPE_BT_SKIM) != -1)
+			{
+				Serial.println("Starting Bluetooth CC Skimmer scan. Stop with " + (String)STOPSCAN_CMD);
+				wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS);
+			}
+
 			else
 			{
-				Serial.println("Starting PMKID sniff with deauthentication on channel " + (String)wifi_scan_obj.set_channel + ". Stop with " + (String)STOPSCAN_CMD);
-				wifi_scan_obj.StartScan(WIFI_SCAN_ACTIVE_EAPOL);
+				Serial.println("Sniff type not properly defined");
+				return;
 			}
 		}
 
@@ -282,23 +310,47 @@ void SerialCommandLine::runCommand(String input)
 		// attack
 		if (cmd_args.get(0) == ATTACK_CMD)
 		{
-			int attack_type_switch = this->argSearch(&cmd_args, "-t"); // Required
-			int list_beacon_sw = this->argSearch(&cmd_args, "-l");
-			int rand_beacon_sw = this->argSearch(&cmd_args, "-r");
-			int ap_beacon_sw = this->argSearch(&cmd_args, "-a");
 
-			if (attack_type_switch == -1)
+			// Branch on attack type
+			// Deauth
+			if (this->argSearch(&cmd_args, ATTACK_TYPE_DEAUTH) != -1)
 			{
-				Serial.println("You must specify an attack type");
-				return;
+				if (!this->apSelected())
+				{
+					Serial.println("You don't have any targets selected. Use " + (String)SEL_CMD);
+					return;
+				}
+
+				Serial.println("Starting Deauthentication attack. Stop with " + (String)STOPSCAN_CMD);
+				wifi_scan_obj.StartScan(WIFI_ATTACK_DEAUTH);
 			}
-			else
+			// Beacon
+			else if (this->argSearch(&cmd_args, ATTACK_TYPE_BEACON) != -1)
 			{
-				String attack_type = cmd_args.get(attack_type_switch + 1);
+				int list_beacon_sw = this->argSearch(&cmd_args, "-ssid");
+				int rand_beacon_sw = this->argSearch(&cmd_args, "-random");
+				int ap_beacon_sw = this->argSearch(&cmd_args, "-ap");
 
-				// Branch on attack type
-				// Deauth
-				if (attack_type == ATTACK_TYPE_DEAUTH)
+				// spam by SSID list
+				if (list_beacon_sw != -1)
+				{
+					if (!this->hasSSIDs())
+					{
+						Serial.println("You don't have any SSIDs in your list. Use " + (String)SSID_CMD);
+						return;
+					}
+
+					Serial.println("Starting Beacon SSID list spam. Stop with " + (String)STOPSCAN_CMD);
+					wifi_scan_obj.StartScan(WIFI_ATTACK_BEACON_LIST);
+				}
+				// spam with random
+				else if (rand_beacon_sw != -1)
+				{
+					Serial.println("Starting random Beacon spam. Stop with " + (String)STOPSCAN_CMD);
+					wifi_scan_obj.StartScan(WIFI_ATTACK_BEACON_SPAM);
+				}
+				// Spam from AP list
+				else if (ap_beacon_sw != -1)
 				{
 					if (!this->apSelected())
 					{
@@ -306,107 +358,36 @@ void SerialCommandLine::runCommand(String input)
 						return;
 					}
 
-					Serial.println("Starting Deauthentication attack. Stop with " + (String)STOPSCAN_CMD);
-					wifi_scan_obj.StartScan(WIFI_ATTACK_DEAUTH);
-				}
-				// Beacon
-				else if (attack_type == ATTACK_TYPE_BEACON)
-				{
-					// spam by list
-					if (list_beacon_sw != -1)
-					{
-						if (!this->hasSSIDs())
-						{
-							Serial.println("You don't have any SSIDs in your list. Use " + (String)SSID_CMD);
-							return;
-						}
-
-						Serial.println("Starting Beacon list spam. Stop with " + (String)STOPSCAN_CMD);
-						wifi_scan_obj.StartScan(WIFI_ATTACK_BEACON_LIST);
-					}
-					// spam with random
-					else if (rand_beacon_sw != -1)
-					{
-						Serial.println("Starting random Beacon spam. Stop with " + (String)STOPSCAN_CMD);
-						wifi_scan_obj.StartScan(WIFI_ATTACK_BEACON_SPAM);
-					}
-					// Spam from AP list
-					else if (ap_beacon_sw != -1)
-					{
-						if (!this->apSelected())
-						{
-							Serial.println("You don't have any targets selected. Use " + (String)SEL_CMD);
-							return;
-						}
-
-						Serial.println("Starting Targeted AP Beacon spam. Stop with " + (String)STOPSCAN_CMD);
-						wifi_scan_obj.StartScan(WIFI_ATTACK_AP_SPAM);
-					}
-					else
-					{
-						Serial.println("You did not specify a beacon attack type");
-					}
-				}
-				else if (attack_type == ATTACK_TYPE_PROBE)
-				{
-					if (!this->apSelected())
-					{
-						Serial.println("You don't have any targets selected. Use " + (String)SEL_CMD);
-						return;
-					}
-					Serial.println("Starting Probe spam. Stop with " + (String)STOPSCAN_CMD);
-
-					wifi_scan_obj.StartScan(WIFI_ATTACK_AUTH);
-				}
-				else if (attack_type == ATTACK_TYPE_RR)
-				{
-					Serial.println("Starting Rick Roll Beacon spam. Stop with " + (String)STOPSCAN_CMD);
-					wifi_scan_obj.StartScan(WIFI_ATTACK_RICK_ROLL);
+					Serial.println("Starting Targeted AP Beacon spam. Stop with " + (String)STOPSCAN_CMD);
+					wifi_scan_obj.StartScan(WIFI_ATTACK_AP_SPAM);
 				}
 				else
 				{
-					Serial.println("Attack type not properly defined");
-					return;
+					Serial.println("You did not specify a beacon attack type");
 				}
 			}
-		}
-
-		//// Bluetooth scan/attack commands
-		// Bluetooth scan
-		if (cmd_args.get(0) == BT_SNIFF_CMD)
-		{
-			Serial.println("Starting Bluetooth scan. Stop with " + (String)STOPSCAN_CMD);
-			wifi_scan_obj.StartScan(BT_SCAN_ALL);
-		}
-		// Bluetooth CC Skimmer scan
-		else if (cmd_args.get(0) == BT_SKIM_CMD)
-		{
-			Serial.println("Starting Bluetooth CC Skimmer scan. Stop with " + (String)STOPSCAN_CMD);
-			wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS);
-		}
-
-		// Update command
-		if (cmd_args.get(0) == UPDATE_CMD)
-		{
-			int w_sw = this->argSearch(&cmd_args, "-w");  // Web update
-			int sd_sw = this->argSearch(&cmd_args, "-s"); // SD Update
-
-			// Update via OTA
-			if (w_sw != -1)
+			// Probe
+			else if (this->argSearch(&cmd_args, ATTACK_TYPE_PROBE) != -1)
 			{
-				Serial.println("Starting Marauder OTA Update. Stop with " + (String)STOPSCAN_CMD);
-				wifi_scan_obj.currentScanMode = OTA_UPDATE;
-				web_obj.setupOTAupdate();
-			}
-			// Update via SD
-			else if (sd_sw != -1)
-			{
-				if (!sd_obj.supported)
+				if (!this->apSelected())
 				{
-					Serial.println("SD card is not connected. Cannot perform SD Update");
+					Serial.println("You don't have any targets selected. Use " + (String)SEL_CMD);
 					return;
-				} else 
-					sd_obj.runUpdate();
+				}
+				Serial.println("Starting Probe spam. Stop with " + (String)STOPSCAN_CMD);
+
+				wifi_scan_obj.StartScan(WIFI_ATTACK_AUTH);
+			}
+			// Rickroll
+			else if (this->argSearch(&cmd_args, ATTACK_TYPE_RR) != -1)
+			{
+				Serial.println("Starting Rick Roll Beacon spam. Stop with " + (String)STOPSCAN_CMD);
+				wifi_scan_obj.StartScan(WIFI_ATTACK_RICK_ROLL);
+			}
+			else
+			{
+				Serial.println("Attack type not properly defined");
+				return;
 			}
 		}
 	}
@@ -415,46 +396,22 @@ void SerialCommandLine::runCommand(String input)
 	// List access points
 	if (cmd_args.get(0) == LIST_AP_CMD)
 	{
-		int ap_sw = this->argSearch(&cmd_args, "-a");
-		int ss_sw = this->argSearch(&cmd_args, "-s");
+		int ap_sw = this->argSearch(&cmd_args, "-ap");
+		int ss_sw = this->argSearch(&cmd_args, "-ssid");
 
 		// List APs
 		if (ap_sw != -1)
 		{
-			for (int i = 0; i < access_points->size(); i++)
-			{
-				AccessPoint ap = access_points->get(i);
-				Serial.printf("[%d] %s%s\n %02x:%02x:%02x:%02x:%02x:%02x %s %d Ch:%d\n", i, ap.essid.c_str(), access_points->get(i).selected ? " (+)" : "", ap.bssid[0], ap.bssid[1], ap.bssid[2], ap.bssid[3], ap.bssid[4], ap.bssid[5], wifi_scan_obj.getSignalStrength(ap.rssi), ap.rssi, ap.channel);
-			}
+			wifi_scan_obj.listAPs();
 		}
 		// List SSIDs
 		else if (ss_sw != -1)
 		{
-			for (int i = 0; i < ssids->size(); i++)
-			{
-				ssid station = ssids->get(i);
-				Serial.printf("[%d] %s%s\n %02x:%02x:%02x:%02x:%02x:%02x\n", i, station.essid.c_str(), ssids->get(i).selected ? " (+)" : "", station.bssid[0], station.bssid[1], station.bssid[2], station.bssid[3], station.bssid[4], station.bssid[5]);
-			}
+			wifi_scan_obj.listSSIDs();
 		}
 		else
 		{
-			if (access_points->size() > 0)
-				Serial.println("--- APs ------------");
-
-			for (int i = 0; i < access_points->size(); i++)
-			{
-				AccessPoint ap = access_points->get(i);
-				Serial.printf("[%d] %s%s\n%02x:%02x:%02x:%02x:%02x:%02x %s %d Ch:%d\n", i, ap.essid.c_str(), access_points->get(i).selected ? " (+)" : "", ap.bssid[0], ap.bssid[1], ap.bssid[2], ap.bssid[3], ap.bssid[4], ap.bssid[5], wifi_scan_obj.getSignalStrength(ap.rssi), ap.rssi, ap.channel);
-			}
-
-			if (ssids->size() > 0)
-				Serial.println("--- SSIDs ----------");
-
-			for (int i = 0; i < ssids->size(); i++)
-			{
-				ssid station = ssids->get(i);
-				Serial.printf("[%d] %s%s\n%02x:%02x:%02x:%02x:%02x:%02x\n", i, station.essid.c_str(), ssids->get(i).selected ? " (+)" : "", station.bssid[0], station.bssid[1], station.bssid[2], station.bssid[3], station.bssid[4], station.bssid[5]);
-			}
+			wifi_scan_obj.listAll();
 
 			return;
 		}
@@ -463,8 +420,8 @@ void SerialCommandLine::runCommand(String input)
 	else if (cmd_args.get(0) == SEL_CMD)
 	{
 		// Get switches
-		int ap_sw = this->argSearch(&cmd_args, "-a");
-		int ss_sw = this->argSearch(&cmd_args, "-s");
+		int ap_sw = this->argSearch(&cmd_args, "-ap");
+		int ss_sw = this->argSearch(&cmd_args, "-ssid");
 
 		// select Access points
 		if (ap_sw != -1)
@@ -562,30 +519,21 @@ void SerialCommandLine::runCommand(String input)
 	// SSID stuff
 	else if (cmd_args.get(0) == SSID_CMD)
 	{
-		int add_sw = this->argSearch(&cmd_args, "-a");
-		int gen_sw = this->argSearch(&cmd_args, "-g");
-		int spc_sw = this->argSearch(&cmd_args, "-n");
-		int rem_sw = this->argSearch(&cmd_args, "-r");
+		int add_sw = this->argSearch(&cmd_args, "-add");
+		int gen_sw = this->argSearch(&cmd_args, "-generate");
+		int rem_sw = this->argSearch(&cmd_args, "-remove");
 
-		// Add ssid
-		if (add_sw != -1)
+		// Generate random
+		if (gen_sw != -1)
 		{
-			// Generate random
-			if (gen_sw != -1)
-			{
-				int gen_count = cmd_args.get(gen_sw + 1).toInt();
-				wifi_scan_obj.generateSSIDs(gen_count);
-			}
-			// Add specific
-			else if (spc_sw != -1)
-			{
-				String essid = cmd_args.get(spc_sw + 1);
-				wifi_scan_obj.addSSID(essid);
-			}
-			else
-			{
-				Serial.println("You did not specify how to add SSIDs");
-			}
+			int gen_count = cmd_args.get(gen_sw + 1).toInt();
+			wifi_scan_obj.generateSSIDs(gen_count);
+		}
+		// Add ssid
+		else if (add_sw != -1)
+		{
+			String essid = cmd_args.get(add_sw + 1);
+			wifi_scan_obj.addSSID(essid);
 		}
 		// Remove SSID
 		else if (rem_sw != -1)

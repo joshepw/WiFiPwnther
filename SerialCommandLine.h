@@ -4,12 +4,10 @@
 #include <Arduino.h>
 #include "configs.h"
 #include "WiFiScan.h"
-#include "Web.h"
 #include "SDInterface.h"
 #include "settings.h"
 
 extern WiFiScan wifi_scan_obj;
-extern Web web_obj;
 extern SDInterface sd_obj;
 extern Settings settings_obj;
 extern LinkedList<AccessPoint>* access_points;
@@ -20,29 +18,40 @@ extern const String PROGMEM version_number;
 
 // Admin
 const char PROGMEM CH_CMD[] = "channel";
-const char PROGMEM CLEARAP_CMD[] = "clearlist";
+const char PROGMEM CLEARAP_CMD[] = "clear";
 const char PROGMEM REBOOT_CMD[] = "reboot";
-const char PROGMEM UPDATE_CMD[] = "update";
 const char PROGMEM HELP_CMD[] = "help";
 const char PROGMEM STATUS_CMD[] = "status";
 const char PROGMEM SETTINGS_CMD[] = "settings";
 
 // WiFi sniff/scan
-const char PROGMEM SCANAP_CMD[] = "scanap";
+const char PROGMEM SCANAP_CMD[] = "scan";
+const char PROGMEM SNIFF_CMD[] = "sniff";
+
+const char PROGMEM SNIFF_TYPE_BEACON[] = "-beacon";
+const char PROGMEM SNIFF_TYPE_PROBE[] = "-probe";
+const char PROGMEM SNIFF_TYPE_PWN[] = "-pwn";
+const char PROGMEM SNIFF_TYPE_ESP[] = "-esp";
+const char PROGMEM SNIFF_TYPE_DEAUTH[] = "-deauth";
+const char PROGMEM SNIFF_TYPE_PMKID[] = "-pmkid";
+const char PROGMEM SNIFF_TYPE_BT[] = "-bt";
+const char PROGMEM SNIFF_TYPE_BT_SKIM[] = "-skim";
+
 const char PROGMEM SNIFF_BEACON_CMD[] = "sniffbeacon";
 const char PROGMEM SNIFF_PROBE_CMD[] = "sniffprobe";
 const char PROGMEM SNIFF_PWN_CMD[] = "sniffpwn";
 const char PROGMEM SNIFF_ESP_CMD[] = "sniffesp";
 const char PROGMEM SNIFF_DEAUTH_CMD[] = "sniffdeauth";
 const char PROGMEM SNIFF_PMKID_CMD[] = "sniffpmkid";
-const char PROGMEM STOPSCAN_CMD[] = "stopscan";
+
+const char PROGMEM STOPSCAN_CMD[] = "stop";
 
 // WiFi attack
 const char PROGMEM ATTACK_CMD[] = "attack";
-const char PROGMEM ATTACK_TYPE_DEAUTH[] = "deauth";
-const char PROGMEM ATTACK_TYPE_BEACON[] = "beacon";
-const char PROGMEM ATTACK_TYPE_PROBE[] = "probe";
-const char PROGMEM ATTACK_TYPE_RR[] = "rickroll";
+const char PROGMEM ATTACK_TYPE_DEAUTH[] = "-deauth";
+const char PROGMEM ATTACK_TYPE_BEACON[] = "-beacon";
+const char PROGMEM ATTACK_TYPE_PROBE[] = "-probe";
+const char PROGMEM ATTACK_TYPE_RR[] = "-rickroll";
 
 // WiFi Aux
 const char PROGMEM LIST_AP_CMD[] = "list";
@@ -61,8 +70,6 @@ const char PROGMEM HELP_MESSAGE[] =
 	"clearlist -a\n"
 	"clearlist -s\n"
 	"reboot\n"
-	"update -s\n"
-	"update -w\n"
 	"settings [-s <setting> enable/disable>]/[-r]\n"
 	"scanap\n"
 	"scanap -f\n"
