@@ -65,32 +65,37 @@ const char PROGMEM BT_SKIM_CMD[] = "sniffskim";
 //// Command help messages
 // Admin
 const char PROGMEM HELP_MESSAGE[] = 
-	"----- Commands -----\n"
-	"channel [-s <channel>]\n"
-	"clearlist -a\n"
-	"clearlist -s\n"
-	"reboot\n"
-	"settings [-s <setting> enable/disable>]/[-r]\n"
-	"scanap\n"
-	"scanap -f\n"
-	"status\n"
-	"sniffbeacon\n"
-	"sniffprobe\n"
-	"sniffpwn\n"
-	"sniffesp\n"
-	"sniffdeauth\n"
-	"sniffpmkid [-c <channel>]\n"
-	"stopscan\n"
-	"attack -t <beacon [-l/-r/-a]/deauth/probe/rickroll>\n"
-	"list -s\n"
-	"list -a\n"
-	"select -a <index (comma separated)>\n"
-	"select -s <index (comma separated)>\n"
-	"ssid -a [-g <count>/-n <name>]\n"
-	"ssid -r <index>\n"
-	"sniffbt\n"
-	"sniffskim\n"
-	"--------------------\n";
+"--------------- Commands ---------------\n"
+"channel [-set <channel>]\n"
+"clear [-ap/-ssid]\n"
+"reboot\n"
+"settings [-set <setting> true/false>]/[-restore]/[-json]\n"
+"scan\n"
+"status\n"
+"sniff [-beacon/-probe/-pwn/-esp/-deauth/-pmkid [-channel <channel>/-frames]/-bt/-skim]\n"
+"stop\n"
+"attack -t <beacon [-l/-r/-a]/deauth/probe/rickroll>\n"
+"list [-ap/-ssid]\n"
+"select [-ap <index (comma separated)/all>]/[-ssid <index (comma separated)/all>]\n"
+"ssid [-add <name>/-generate <count>/-remove <index>]\n"
+"----------------------------------------\n";
+
+const char PROGMEM ASCII_ART[] =
+"                                        \n"
+"                                        \n"
+"         @@@                 @@@        \n"
+"       @@   @@             @@   @@      \n"
+"       @@     @@         @@     @@      \n"
+"       @@       @@@@@@@@@       @@      \n"
+"       @@   @@@@         @@@@   @@      \n"
+"       @@@@@                 @@@@@      \n"
+"       @@                       @@      \n"
+"     @@     @@  @@@@@@@@@  @@     @@    \n"
+"     @@           @@@@@           @@    \n"
+"   @@                               @@  \n"
+"     @@@@                       @@@@    \n"
+"         @@@@@@@@@@@@@@@@@@@@@@@        \n"
+"                                        ";
 
 class SerialCommandLine
 {

@@ -149,12 +149,13 @@ void WiFiScan::foundAP(AccessPoint ap)
 		DynamicJsonDocument doc(1024);
 
 		doc["type"] = "found";
-		doc["essid"] = ap.essid == "" ? "*Hidden*" : ap.essid;
+		doc["essid"] = ap.essid;
 		doc["channel"] = ap.channel;
 		doc["bssid"] = getMacAddressText(ap.bssid);
 		doc["selected"] = ap.selected;
 		doc["beacon"] = getBeaconText(ap.beacon);
 		doc["rssi"] = ap.rssi;
+		doc["hidden"] = ap.essid == "";
 
 		serializeJson(doc, Serial);
 		Serial.println();
@@ -171,12 +172,13 @@ void WiFiScan::foundSniffAP(AccessPoint ap) {
 		DynamicJsonDocument doc(1024);
 
 		doc["type"] = "sniff";
-		doc["essid"] = ap.essid == "" ? "*Hidden*" : ap.essid;
+		doc["essid"] = ap.essid;
 		doc["channel"] = ap.channel;
 		doc["bssid"] = getMacAddressText(ap.bssid);
 		doc["selected"] = ap.selected;
 		doc["beacon"] = getBeaconText(ap.beacon);
 		doc["rssi"] = ap.rssi;
+		doc["hidden"] = ap.essid == "";
 
 		serializeJson(doc, Serial);
 		Serial.println();
@@ -191,12 +193,13 @@ void WiFiScan::updateAP(AccessPoint ap, int id) {
 
 		doc["type"] = "update";
 		doc["id"] = id;
-		doc["essid"] = ap.essid == "" ? "*Hidden*" : ap.essid;
+		doc["essid"] = ap.essid;
 		doc["channel"] = ap.channel;
 		doc["bssid"] = getMacAddressText(ap.bssid);
 		doc["selected"] = ap.selected;
 		doc["beacon"] = getBeaconText(ap.beacon);
 		doc["rssi"] = ap.rssi;
+		doc["hidden"] = ap.essid == "";
 
 		serializeJson(doc, Serial);
 		Serial.println();
@@ -214,12 +217,13 @@ void WiFiScan::listAPs()
 			AccessPoint ap = access_points->get(i);
 
 			doc["ap"][i]["id"] = i;
-			doc["ap"][i]["essid"] = ap.essid == "" ? "*Hidden*" : ap.essid;
+			doc["ap"][i]["essid"] = ap.essid;
 			doc["ap"][i]["channel"] = ap.channel;
 			doc["ap"][i]["bssid"] = getMacAddressText(ap.bssid);
 			doc["ap"][i]["selected"] = ap.selected;
 			doc["ap"][i]["beacon"] = getBeaconText(ap.beacon);
 			doc["ap"][i]["rssi"] = ap.rssi;
+			doc["ap"][i]["hidden"] = ap.essid == "";
 		}
 
 		serializeJson(doc, Serial);
@@ -275,12 +279,13 @@ void WiFiScan::listAll()
 			AccessPoint ap = access_points->get(i);
 
 			doc["ap"][i]["id"] = i;
-			doc["ap"][i]["essid"] = ap.essid == "" ? "*Hidden*" : ap.essid;
+			doc["ap"][i]["essid"] = ap.essid;
 			doc["ap"][i]["channel"] = ap.channel;
 			doc["ap"][i]["bssid"] = getMacAddressText(ap.bssid);
 			doc["ap"][i]["selected"] = ap.selected;
 			doc["ap"][i]["beacon"] = getBeaconText(ap.beacon);
 			doc["ap"][i]["rssi"] = ap.rssi;
+			doc["ap"][i]["hidden"] = ap.essid == "";
 		}
 
 		for (int i = 0; i < ssids->size(); i++)
@@ -299,12 +304,12 @@ void WiFiScan::listAll()
 	else
 	{
 		if (access_points->size() > 0)
-				Serial.println("--- APs ------------");
+				Serial.println("--- APs --------------------------------");
 
 		listAPs();
 
 		if (ssids->size() > 0)
-			Serial.println("--- SSIDs ----------");
+			Serial.println("--- SSIDs ------------------------------");
 
 		listSSIDs();
 	}

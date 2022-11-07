@@ -6,12 +6,12 @@ SerialCommandLine::SerialCommandLine()
 
 void SerialCommandLine::RunSetup()
 {
-	Serial.println("--------------------");
-	Serial.println("  Pwnther  " + version_number);
-	Serial.println("--------------------");
-	Serial.println("  Type 'help' for   ");
-	Serial.println("  more information  ");
-	Serial.println("--------------------");
+	Serial.println(ASCII_ART);
+	Serial.println("              WiFox " + version_number);
+	Serial.println("----------------------------------------");
+	Serial.println("            Type 'help' for             ");
+	Serial.println("            more information            ");
+	Serial.println("----------------------------------------");
 
 	Serial.print("> ");
 }
@@ -131,7 +131,10 @@ void SerialCommandLine::runCommand(String input)
 
 		if (cmd_args.size() == 1)
 		{
-			Serial.println("Current channel: " + (String)wifi_scan_obj.set_channel);
+			if (wifi_scan_obj.is_json) 
+				Serial.println("{\"channel\":" + (String)wifi_scan_obj.set_channel) + "}";
+			else
+				Serial.println("Current channel: " + (String)wifi_scan_obj.set_channel);
 		}
 		else if (ch_set != -1)
 		{

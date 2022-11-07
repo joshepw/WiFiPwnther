@@ -2,7 +2,7 @@
 #define configs_h
 
 #define POLISH_POTATO
-#define APP_VERSION "v0.0.2-rc.3"
+#define APP_VERSION "v0.0.3"
 
 // #define BRD_32FLIPPER
 #define BRD_32CAM
